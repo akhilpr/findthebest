@@ -20,11 +20,15 @@ const PlaceCard = ({ place, index = 0 }) => {
       style={{ animationDelay: `${index * 60}ms` }}
     >
       <div className="relative overflow-hidden rounded-2xl bg-white border border-stone-200">
-        <div className="aspect-[4/5] overflow-hidden bg-stone-100">
+        <div className="aspect-[4/3] overflow-hidden bg-stone-200">
           <img
             src={place.image}
             alt={place.name}
             loading="lazy"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1200";
+            }}
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
           />
         </div>

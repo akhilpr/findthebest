@@ -27,6 +27,32 @@ app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 
+async def seed_curated():
+    """Upsert curated places on startup so image/URL fixes propagate."""
+    for p in CURATED_PLACES:
+        existing = await db.places.find_one({"name": p["name"], "city": p["city"], "curated": True}, {"_id": 0, "id": 1})
+        if existing:
+            await db.places.update_one(
+                {"id": existing["id"]},
+                {"$set": {
+                    "image": p["image"],
+                    "hero_image": p["hero_image"],
+                    "tagline": p["tagline"],
+                }},
+            )
+        else:
+            place = Place(**p)
+            await db.places.insert_one(place.model_dump())
+
+
+@app.on_event("startup")
+async def on_startup():
+    try:
+        await seed_curated()
+    except Exception as e:
+        logging.warning(f"Seed error: {e}")
+
+
 # ================= Models =================
 class VideoSource(BaseModel):
     title: str
@@ -216,8 +242,8 @@ CURATED_PLACES: List[dict] = [
         "city": "Kochi",
         "country": "India",
         "tagline": "A single kettle, twelve stools, and the cardamom chai that broke YouTube.",
-        "image": "https://images.unsplash.com/photo-1571167530149-c72f2fafa9ed?w=1200",
-        "hero_image": "https://images.unsplash.com/photo-1552879890-3a06dd3a06c2?w=1600",
+        "image": "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?w=1200",
+        "hero_image": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=1600",
         "price_range": "$",
         "verdict": {
             "summary": "After going viral in 2023, this tiny stall has become a bucket-list item for South India food creators. Consensus: still worth it, still authentic, still 20 rupees.",

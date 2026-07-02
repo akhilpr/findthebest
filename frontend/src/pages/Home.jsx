@@ -60,7 +60,7 @@ const Home = () => {
           <div className="col-span-2 row-span-1 overflow-hidden rounded-2xl bg-stone-100 relative group">
             {hero && (
               <>
-                <img src={hero.hero_image} alt={hero.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                <img src={hero.hero_image} alt={hero.name} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = hero.image; }} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-scout-ink/85 via-scout-ink/10 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
                   <div className="font-mono text-[10px] uppercase tracking-[0.25em] opacity-80">Top-rated this week</div>

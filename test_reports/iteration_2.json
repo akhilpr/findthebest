@@ -1,0 +1,29 @@
+{
+  "summary": "Iteration 2 bug-fix verification. Home trending grid renders all 6 expected place names (Jew Town Chai Wallah, Aman Tokyo, Ronin, Tim Ho Wan, Sichuan Impression, Bar Basso). Jew Town image loads (naturalWidth=1200, correct URL photo-1597481499750-3e6b22637e12). No broken images on home page. Category chip cafe filters browse grid correctly. Clicking a trending card navigates to /place/{id} and renders data-testid='place-detail-page' with correct H1 name. Backend GET /api/trending returns 6 places sorted by verdict.sentiment_score desc, all names non-empty, Jew Town image URL matches expected. Skipped /analyze end-to-end AI test to avoid long LLM latency (deferred to full testing).",
+  "tested_scope": ["frontend", "backend", "integration"],
+  "passed": [
+    "GET /api/trending returns 6 places sorted by sentiment_score desc (9.7,9.6,9.5,9.4,9.2,9.1)",
+    "Jew Town Chai Wallah image URL = https://images.unsplash.com/photo-1597481499750-3e6b22637e12?w=1200 (fix applied)",
+    "All 6 trending place cards render non-empty h3 names on home page",
+    "No broken images (all imgs naturalWidth > 0) on home page",
+    "chip-cafe filters browse-by-category grid (Café de Flore shown)",
+    "Clicking place card navigates to /place/{id} and renders data-testid='place-detail-page' with H1='Jew Town Chai Wallah'"
+  ],
+  "failed": [
+    {
+      "area": "frontend/testability",
+      "issue": "Main agent claimed data-testid='place-card-name-{id}' was added to h3 in PlaceCard.jsx line 53, but the attribute is NOT present in the file. The h3 renders {place.name} without any data-testid. Name text is visible/functional, but the promised testid selector does not exist.",
+      "evidence": "PlaceCard.jsx:53 -- <h3 className=... > {place.name} </h3> (no data-testid). Playwright query for [data-testid^='place-card-name-'] returned 0 matches.",
+      "priority": "LOW"
+    }
+  ],
+  "action_items": [
+    "Add data-testid={`place-card-name-${place.id}`} to the <h3> in /app/frontend/src/components/PlaceCard.jsx (line 53) to match the fix that was claimed. Names are already visible and functional so this is testability-only, not user-facing."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "95%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "not_tested": [
+    "/analyze end-to-end AI live analysis flow (deferred — requires long-running Gemini call; core UI fixes independently verified)"
+  ]
+}

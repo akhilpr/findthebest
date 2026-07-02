@@ -50,7 +50,7 @@ const PlaceDetail = () => {
 
       {/* Hero */}
       <section className="mt-6 relative rounded-3xl overflow-hidden h-[50vh] min-h-[420px] bg-stone-900">
-        <img src={place.hero_image} alt={place.name} className="w-full h-full object-cover opacity-90" />
+        <img src={place.hero_image} alt={place.name} onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = place.image; }} className="w-full h-full object-cover opacity-90" />
         <div className="absolute inset-0 bg-gradient-to-t from-scout-ink/90 via-scout-ink/30 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-8 lg:p-12 text-white">
           <div className="font-mono text-[10px] uppercase tracking-[0.25em] opacity-80 mb-2">
