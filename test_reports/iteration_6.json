@@ -1,0 +1,34 @@
+{
+  "summary": "Verified iteration 6 features: Google Maps iframe embed on PlaceDetail, Nominatim lazy-geocoding on GET /api/places/{id}, POST /api/enrich/{place_id}, and real YouTube Data API v3 integration. All core flows pass. Auto-enrich in PlaceDetail useEffect works so effectively that the standalone 'Fetch YouTube videos' CTA button cannot be observed in practice — CTA disappears before it can be captured because auto-enrich resolves and adds videos on first render.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "POST /api/enrich/{Bar Basso id} → 200 with lat=45.4767746, lng=9.2175792, formatted_address contains 'Milano', videos array length=3",
+    "POST /api/enrich/{Paragon id} (no videos, no lat) → 200 with real coords 10.0077,76.364 in Kochi, formatted_address contains 'Kochi, Kerala, India', and 3 REAL YouTube videos with i.ytimg.com/hqdefault thumbnails (video_ids: OhBNp_mCmX4, 9BzShYJ-Iu4, xB4sQ4ZvcxI; channels: Ashish Vidyarthi Actor Vlogs, DCT EATS, Shortleft Travels) — confirms YouTube Data API v3 is live and returning real results",
+    "POST /api/enrich/{non-existent id} → 404 with {'detail':'Place not found'}",
+    "GET /api/places/{Kashi Art Cafe id} lazy geocode → first GET returns latitude=9.9666408, longitude=76.2430255, formatted_address='Kashi Art Cafe, Burgher Street, Fort Kochi, Kochi, Ernakulam, Kerala...' (Nominatim working)",
+    "Frontend /place/{Bar Basso}: data-testid='map-embed-section' rendered; data-testid='google-maps-embed' iframe src exactly = 'https://www.google.com/maps?q=45.4767746,9.2175792&z=17&output=embed'; 'On the map' heading + formatted_address containing 'Milano' visible; hero still shows google-maps-link + google-maps-directions",
+    "Frontend auto-enrich in useEffect works silently: /place/{Dhe Puttu} (started with 0 videos, no lat) auto-populated to 3 REAL YouTube videos (i.ytimg.com thumbs) and coords 10.020,76.310 (Kochi area) — map embed src updates to precise lat/lng",
+    "Home page regression: title 'Scout — Best Places, Verified by YouTube' loads, Discover + Analyze nav present, 86 card-maps buttons render"
+  ],
+  "failed": [
+    {
+      "area": "Bar Basso enrich response — YouTube videos not real",
+      "issue": "POST /api/enrich for Bar Basso returned the 3 CURATED seed videos (video_ids dQw4w9WgXcQ, kJQP7kiw5Fk, 3JZ_D3ELwOQ with unsplash.com thumbnails), NOT real YouTube results. Root cause: server.py line 608 only calls fetch_youtube_videos when len(doc.videos) < 3; Bar Basso already has 3 curated videos so YouTube API is skipped. The review request explicitly expected 'each with real video_id, non-empty title, channel, thumbnail from i.ytimg.com or googleusercontent' for Bar Basso. YouTube API itself works correctly (verified with Paragon and Dhe Puttu returning real videos).",
+      "evidence": "curl POST /api/enrich/7886d255-... returned videos with thumbnails='https://images.unsplash.com/...' and channels like 'Wine Wanderers' (unchanged from seed)",
+      "priority": "MEDIUM"
+    },
+    {
+      "area": "Frontend explicit CTA button click not verifiable",
+      "issue": "The data-testid='deep-dive-cta' with 'Fetch YouTube videos' button (data-testid='enrich-btn') could not be observed on any candidate place because the useEffect auto-enrich fires immediately on PlaceDetail mount and populates videos before the CTA renders (or it briefly renders then unmounts). This is not a bug per se — auto-enrich is the intended UX — but the explicit click flow described in the review request is effectively unreachable in normal navigation.",
+      "evidence": "Navigated to /place/{Dhe Puttu} (initially videos=0, lat=None); after page load, deep-dive-cta=False, enrich-btn=False, and video-source-* cards were already rendered with real YouTube data",
+      "priority": "LOW"
+    }
+  ],
+  "action_items": [
+    "Decide whether POST /api/enrich should FORCE-refresh videos for curated places (currently skips when videos.length >= 3). If reviewer wants Bar Basso to switch from curated seed to real YouTube results, remove/adjust the guard at server.py line 608.",
+    "If explicit CTA button flow needs to be testable/visible, consider deferring auto-enrich until user clicks (or only auto-enrich coords, keeping video enrich gated behind the CTA button)."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}

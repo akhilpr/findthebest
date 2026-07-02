@@ -1,18 +1,28 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { fetchPlace } from "@/lib/api";
+import { toast } from "sonner";
+import { fetchPlace, enrichPlace } from "@/lib/api";
 import SentimentBar from "@/components/SentimentBar";
-import { ArrowLeft, Fire, CheckCircle, XCircle, ForkKnife, Quotes, PlayCircle, MapPin, NavigationArrow } from "@phosphor-icons/react";
+import { ArrowLeft, Fire, CheckCircle, XCircle, ForkKnife, Quotes, PlayCircle, MapPin, NavigationArrow, Sparkle } from "@phosphor-icons/react";
 
 const mapsUrl = (place) => {
   const q = encodeURIComponent(`${place.name} ${place.city || ""}`.trim());
   return `https://www.google.com/maps/search/?api=1&query=${q}`;
 };
 
+const embedSrc = (place) => {
+  if (place.latitude != null && place.longitude != null) {
+    return `https://www.google.com/maps?q=${place.latitude},${place.longitude}&z=17&output=embed`;
+  }
+  const q = encodeURIComponent(`${place.name} ${place.city || ""}`.trim());
+  return `https://www.google.com/maps?q=${q}&output=embed`;
+};
+
 const PlaceDetail = () => {
   const { id } = useParams();
   const [place, setPlace] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [enriching, setEnriching] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -20,8 +30,28 @@ const PlaceDetail = () => {
       const p = await fetchPlace(id).catch(() => null);
       setPlace(p);
       setLoading(false);
+      // Auto-enrich in background if missing videos or coords
+      if (p && ((!p.videos || p.videos.length === 0) || p.latitude == null)) {
+        try {
+          const enriched = await enrichPlace(id);
+          setPlace(enriched);
+        } catch (e) { /* silent */ }
+      }
     })();
   }, [id]);
+
+  const runEnrich = async () => {
+    setEnriching(true);
+    try {
+      const enriched = await enrichPlace(id);
+      setPlace(enriched);
+      toast.success("Enriched with live YouTube data");
+    } catch (e) {
+      toast.error("Enrichment failed");
+    } finally {
+      setEnriching(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -164,6 +194,32 @@ const PlaceDetail = () => {
         </div>
       </section>
 
+      {/* Map embed */}
+      <section className="mt-10" data-testid="map-embed-section">
+        <div className="flex items-end justify-between mb-4">
+          <div>
+            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-stone-500 mb-2">Location</div>
+            <h3 className="font-serif text-3xl tracking-tight">On the map</h3>
+            {place.formatted_address && (
+              <p className="mt-1 text-sm text-stone-600 max-w-2xl font-mono">{place.formatted_address}</p>
+            )}
+          </div>
+        </div>
+        <div className="relative rounded-2xl overflow-hidden border border-stone-200 bg-stone-100" style={{ height: 380 }}>
+          <iframe
+            title={`Map of ${place.name}`}
+            data-testid="google-maps-embed"
+            src={embedSrc(place)}
+            width="100%"
+            height="380"
+            style={{ border: 0 }}
+            loading="lazy"
+            allowFullScreen
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        </div>
+      </section>
+
       {/* Videos rail */}
       {place.videos && place.videos.length > 0 && (
       <section className="mt-14">
@@ -209,11 +265,17 @@ const PlaceDetail = () => {
       {(!place.videos || place.videos.length === 0) && (
         <section className="mt-14 bg-white rounded-3xl border border-stone-200 p-8 text-center" data-testid="deep-dive-cta">
           <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-scout-terracotta mb-2">Want the full story?</div>
-          <h3 className="font-serif text-3xl tracking-tight mb-3">Video sources not indexed for this place yet</h3>
-          <p className="text-stone-600 mb-6 max-w-xl mx-auto">Run a deep-dive analysis to pull the top YouTube reviews, quotes, and comment excerpts for {place.name}.</p>
-          <Link to={`/analyze?q=${encodeURIComponent(place.name)}`} className="inline-flex items-center gap-2 bg-scout-terracotta text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-scout-ink transition-colors">
-            Run deep analysis
-          </Link>
+          <h3 className="font-serif text-3xl tracking-tight mb-3">Fetch live YouTube sources</h3>
+          <p className="text-stone-600 mb-6 max-w-xl mx-auto">Pull the top YouTube reviews and comment excerpts for {place.name} from the live YouTube Data API.</p>
+          <button
+            type="button"
+            onClick={runEnrich}
+            disabled={enriching}
+            data-testid="enrich-btn"
+            className="inline-flex items-center gap-2 bg-scout-terracotta text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-scout-ink transition-colors disabled:opacity-60"
+          >
+            <Sparkle size={14} weight="fill" /> {enriching ? "Fetching videos..." : "Fetch YouTube videos"}
+          </button>
         </section>
       )}
       {place.top_comments?.length > 0 && (

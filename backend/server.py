@@ -6,6 +6,8 @@ import os
 import logging
 import json
 import hashlib
+import asyncio
+import httpx
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
@@ -22,6 +24,107 @@ client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
+YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY', '')
+
+NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search"
+YOUTUBE_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos"
+YOUTUBE_COMMENTS_URL = "https://www.googleapis.com/youtube/v3/commentThreads"
+
+
+async def geocode_place(name: str, city: str = "") -> Optional[dict]:
+    """Free geocoding via OpenStreetMap Nominatim. Returns {lat, lon, display_name} or None."""
+    query = f"{name} {city}".strip()
+    if not query:
+        return None
+    try:
+        async with httpx.AsyncClient(timeout=6.0) as client:
+            r = await client.get(
+                NOMINATIM_URL,
+                params={"q": query, "format": "json", "limit": 1},
+                headers={"User-Agent": "Scout/1.0 (place discovery app)"},
+            )
+            r.raise_for_status()
+            data = r.json()
+            if not data:
+                return None
+            top = data[0]
+            return {
+                "lat": float(top["lat"]),
+                "lon": float(top["lon"]),
+                "display_name": top.get("display_name", ""),
+            }
+    except Exception as e:
+        logging.warning(f"geocode failed for '{query}': {e}")
+        return None
+
+
+def _fmt_views(n: int) -> str:
+    if n >= 1_000_000:
+        return f"{n / 1_000_000:.1f}M"
+    if n >= 1_000:
+        return f"{n / 1_000:.1f}K"
+    return str(n)
+
+
+async def fetch_youtube_videos(name: str, city: str = "", limit: int = 3) -> List[dict]:
+    """Return up to `limit` real YouTube videos + top comment quote for query. [] if key missing/error."""
+    if not YOUTUBE_API_KEY:
+        return []
+    q = f"{name} {city} review".strip()
+    try:
+        async with httpx.AsyncClient(timeout=8.0) as client:
+            search_r = await client.get(YOUTUBE_SEARCH_URL, params={
+                "part": "snippet", "q": q, "type": "video", "maxResults": limit,
+                "order": "relevance", "key": YOUTUBE_API_KEY,
+            })
+            search_r.raise_for_status()
+            items = search_r.json().get("items", [])
+            if not items:
+                return []
+            ids = [i["id"]["videoId"] for i in items if i.get("id", {}).get("videoId")]
+            if not ids:
+                return []
+            stats_r = await client.get(YOUTUBE_VIDEOS_URL, params={
+                "part": "statistics", "id": ",".join(ids), "key": YOUTUBE_API_KEY,
+            })
+            stats_map = {v["id"]: v.get("statistics", {}) for v in stats_r.json().get("items", [])}
+
+            # Fetch one top comment per video (best-effort, ignore errors)
+            comments_map = {}
+            for vid_id in ids:
+                try:
+                    cr = await client.get(YOUTUBE_COMMENTS_URL, params={
+                        "part": "snippet", "videoId": vid_id, "maxResults": 1,
+                        "order": "relevance", "textFormat": "plainText", "key": YOUTUBE_API_KEY,
+                    })
+                    if cr.status_code == 200:
+                        c_items = cr.json().get("items", [])
+                        if c_items:
+                            txt = c_items[0]["snippet"]["topLevelComment"]["snippet"].get("textDisplay", "")
+                            comments_map[vid_id] = txt[:200]
+                except Exception:
+                    pass
+
+            videos = []
+            for it in items:
+                vid = it["id"]["videoId"]
+                sn = it["snippet"]
+                thumb = sn.get("thumbnails", {}).get("high", {}).get("url") or sn.get("thumbnails", {}).get("default", {}).get("url", "")
+                stats = stats_map.get(vid, {})
+                view_count = int(stats.get("viewCount", 0))
+                videos.append({
+                    "title": sn.get("title", "")[:120],
+                    "channel": sn.get("channelTitle", ""),
+                    "video_id": vid,
+                    "thumbnail": thumb,
+                    "views": _fmt_views(view_count),
+                    "quote": comments_map.get(vid, sn.get("description", "")[:180]),
+                })
+            return videos
+    except Exception as e:
+        logging.warning(f"youtube fetch failed for '{q}': {e}")
+        return []
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -62,7 +165,6 @@ class VideoSource(BaseModel):
     views: str
     quote: str
 
-
 class AIVerdict(BaseModel):
     summary: str
     pros: List[str]
@@ -93,6 +195,9 @@ class Place(BaseModel):
     top_comments: List[str]
     tags: List[str]
     curated: bool = True
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    formatted_address: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
@@ -470,6 +575,44 @@ async def get_place(place_id: str):
     doc = await db.places.find_one({"id": place_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Place not found")
+    # Lazy geocode if missing
+    if not doc.get("latitude"):
+        geo = await geocode_place(doc["name"], doc.get("city", ""))
+        if geo:
+            await db.places.update_one({"id": place_id}, {"$set": {
+                "latitude": geo["lat"], "longitude": geo["lon"], "formatted_address": geo["display_name"],
+            }})
+            doc["latitude"] = geo["lat"]
+            doc["longitude"] = geo["lon"]
+            doc["formatted_address"] = geo["display_name"]
+    return doc
+
+
+@api_router.post("/enrich/{place_id}", response_model=Place)
+async def enrich_place(place_id: str):
+    """Fetch real YouTube videos + coordinates for a place and update it in place."""
+    doc = await db.places.find_one({"id": place_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Place not found")
+
+    updates = {}
+    # Geocode if missing
+    if not doc.get("latitude"):
+        geo = await geocode_place(doc["name"], doc.get("city", ""))
+        if geo:
+            updates["latitude"] = geo["lat"]
+            updates["longitude"] = geo["lon"]
+            updates["formatted_address"] = geo["display_name"]
+
+    # Fetch real YouTube videos if we don't have them yet (or only <3)
+    if len(doc.get("videos") or []) < 3:
+        yt_vids = await fetch_youtube_videos(doc["name"], doc.get("city", ""), limit=3)
+        if yt_vids:
+            updates["videos"] = yt_vids
+
+    if updates:
+        await db.places.update_one({"id": place_id}, {"$set": updates})
+        doc.update(updates)
     return doc
 
 
