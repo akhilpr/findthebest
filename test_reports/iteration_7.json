@@ -1,0 +1,19 @@
+{
+  "summary": "Iteration 7 backend retest of POST /api/enrich after removing the `len(doc.videos) < 3` guard. Verified across all 3 Bar Basso records (curated + 2 non-curated) and the Paragon record — each returns 3 real YouTube videos with i.ytimg.com thumbnails, real channels (including BarBassoChannel), and video_ids that are NOT in the seed list. 404 regression also confirmed.",
+  "tested_scope": ["backend"],
+  "passed": [
+    "POST /api/enrich/{Bar Basso curated 7886d255...} → 200; videos=[poWhzmMdv0M(lisander collaku), uRCHKy1sH5s(lisander collaku), 1J9MaHdN8ik(BarBassoChannel)]; all thumbnails on i.ytimg.com; none match seed IDs (dQw4w9WgXcQ/kJQP7kiw5Fk/3JZ_D3ELwOQ/vid1..15); BarBassoChannel present as required",
+    "POST /api/enrich/{Bar Basso 988a7087...} → 200; 3 real YouTube videos (poWhzmMdv0M, uRCHKy1sH5s, lp3rcMlP7Tk) with i.ytimg.com thumbnails; real channels (lisander collaku, BIRKENSTOCK)",
+    "POST /api/enrich/{Bar Basso 77303027...} → 200; 3 real YouTube videos (poWhzmMdv0M, -aPK__m1hrU, 1J9MaHdN8ik) with i.ytimg.com thumbnails; BarBassoChannel present",
+    "Regression: POST /api/enrich/{Paragon a5eb3a52...} → 200; 3 real YouTube videos (9BzShYJ-Iu4/DCT EATS, OhBNp_mCmX4/Ashish Vidyarthi Actor Vlogs, l-jCMRocGYE/Irfan's view); all i.ytimg.com thumbnails",
+    "Regression: POST /api/enrich/nonexistent-id-xyz-123 → 404 {\"detail\":\"Place not found\"}",
+    "Bar Basso lat/lng populated (45.4767746) for map embed regression",
+    "Paragon lat/lng populated (10.0076837)"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "not tested (backend-only request)"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "The iteration 6 MEDIUM issue is resolved: the guard removal means enrich now unconditionally refreshes videos from YouTube API and no longer returns curated/seed videos when real results are available. All 4 places (3 Bar Basso variants + Paragon) return real YouTube data on every call. Frontend /place/{Bar Basso} rail verification was skipped per 'backend only' testing_type in the request."
+}

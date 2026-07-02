@@ -604,11 +604,10 @@ async def enrich_place(place_id: str):
             updates["longitude"] = geo["lon"]
             updates["formatted_address"] = geo["display_name"]
 
-    # Fetch real YouTube videos if we don't have them yet (or only <3)
-    if len(doc.get("videos") or []) < 3:
-        yt_vids = await fetch_youtube_videos(doc["name"], doc.get("city", ""), limit=3)
-        if yt_vids:
-            updates["videos"] = yt_vids
+    # Fetch real YouTube videos (always try; replace curated seed if we get real results)
+    yt_vids = await fetch_youtube_videos(doc["name"], doc.get("city", ""), limit=3)
+    if yt_vids:
+        updates["videos"] = yt_vids
 
     if updates:
         await db.places.update_one({"id": place_id}, {"$set": updates})
