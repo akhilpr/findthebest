@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { fetchPlace, enrichPlace, fetchSimilar } from "@/lib/api";
 import SentimentBar from "@/components/SentimentBar";
@@ -26,6 +26,7 @@ const embedSrc = (place, provider = "osm") => {
 
 const PlaceDetail = () => {
   const { id } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [place, setPlace] = useState(null);
   const [loading, setLoading] = useState(true);
   const [enriching, setEnriching] = useState(false);
@@ -39,14 +40,49 @@ const PlaceDetail = () => {
     fetchSimilar(id).then(setSimilar).catch(() => setSimilar([]));
   }, [id]);
 
-  const openPlayer = (i) => { setPlayerIdx(i); setPlayerVid(place.videos[i]); };
+  const openPlayer = (i) => {
+    setPlayerIdx(i);
+    setPlayerVid(place.videos[i]);
+    setSearchParams({ v: String(i) }, { replace: false });
+  };
+  const closePlayer = () => {
+    setPlayerVid(null);
+    const p = new URLSearchParams(searchParams);
+    p.delete("v");
+    setSearchParams(p, { replace: true });
+  };
   const stepPlayer = (delta) => {
     if (!place?.videos?.length) return;
     const n = place.videos.length;
     const next = (playerIdx + delta + n) % n;
     setPlayerIdx(next);
     setPlayerVid(place.videos[next]);
+    setSearchParams({ v: String(next) }, { replace: true });
   };
+
+  // Deep-link: if ?v=idx present after place loads, open that video
+  useEffect(() => {
+    if (!place?.videos?.length) return;
+    const v = searchParams.get("v");
+    if (v == null) return;
+    const idx = parseInt(v, 10);
+    if (Number.isInteger(idx) && idx >= 0 && idx < place.videos.length) {
+      setPlayerIdx(idx);
+      setPlayerVid(place.videos[idx]);
+    }
+  }, [place]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keyboard shortcuts in player: ← / → / Esc
+  useEffect(() => {
+    if (!playerVid) return;
+    const handler = (e) => {
+      if (e.key === "Escape") closePlayer();
+      else if (e.key === "ArrowLeft") stepPlayer(-1);
+      else if (e.key === "ArrowRight") stepPlayer(1);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }); // deliberate: rebind each render so closures capture fresh playerIdx
 
   const switchProvider = (p) => {
     setMapProvider(p);
@@ -345,7 +381,7 @@ const PlaceDetail = () => {
       {playerVid && (
         <div
           data-testid="video-player-modal"
-          onClick={() => setPlayerVid(null)}
+          onClick={closePlayer}
           className="fixed inset-0 z-50 bg-scout-ink/85 backdrop-blur-sm flex items-center justify-center p-4"
         >
           <button data-testid="video-player-prev" onClick={(e) => { e.stopPropagation(); stepPlayer(-1); }} className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-colors">
@@ -357,10 +393,10 @@ const PlaceDetail = () => {
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-4xl bg-scout-ink rounded-2xl overflow-hidden border border-white/10">
             <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
               <div className="min-w-0">
-                <div className="font-mono text-[10px] uppercase tracking-widest text-white/60">{playerVid.channel} · {playerIdx + 1} / {place.videos.length}</div>
+                <div className="font-mono text-[10px] uppercase tracking-widest text-white/60">{playerVid.channel} · {playerIdx + 1} / {place.videos.length} · <span className="text-white/40">← → esc</span></div>
                 <div className="text-white font-serif text-lg leading-snug line-clamp-1">{playerVid.title}</div>
               </div>
-              <button data-testid="video-player-close" onClick={() => setPlayerVid(null)} className="text-white/70 hover:text-white text-2xl leading-none px-2">×</button>
+              <button data-testid="video-player-close" onClick={closePlayer} className="text-white/70 hover:text-white text-2xl leading-none px-2">×</button>
             </div>
             <div className="aspect-video bg-black">
               <iframe

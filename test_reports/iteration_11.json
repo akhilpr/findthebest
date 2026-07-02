@@ -1,0 +1,25 @@
+{
+  "summary": "Iteration 11 frontend polish verified: video deep-link ?v=idx auto-opens player, keyboard shortcuts (←/→/Esc) work with wraparound, URL syncs on nav, ?v= is stripped on close. Hint '← → esc' visible in header. Regressions clean.",
+  "tested_scope": ["frontend"],
+  "passed": [
+    "GET /place/{Bar Basso id}?v=1 auto-opens video-player-modal on load",
+    "Modal header shows '2 / 3' for v=1 (correct 1-based index for 2nd video)",
+    "Header hint '← → esc' rendered (uppercase via CSS)",
+    "ArrowRight advances index and updates URL to ?v=2 (3/3)",
+    "ArrowRight from last video wraps to ?v=0",
+    "ArrowLeft from first video wraps to ?v=2",
+    "ArrowLeft steps back and updates URL (v=2 -> v=1)",
+    "Escape closes modal and removes ?v= from URL",
+    "Clicking video-source-0 rail item sets URL to ?v=0 (deep-linkable)",
+    "video-player-prev button still works with wraparound",
+    "video-player-next button still works with wraparound",
+    "Backdrop click still closes modal",
+    "similar-section renders",
+    "map-provider-toggle renders (regression clean)"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "N/A (not tested per request)", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}
