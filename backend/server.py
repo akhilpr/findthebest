@@ -51,11 +51,11 @@ async def geocode_place(name: str, city: str = "") -> Optional[dict]:
             r.raise_for_status()
             data = r.json()
             if not data:
-                await db.geo_cache.insert_one({"key": key, "miss": True, "created_at": datetime.now(timezone.utc).isoformat()})
+                await db.geo_cache.insert_one({"key": key, "miss": True, "created_at": datetime.now(timezone.utc).isoformat(), "created_at_dt": datetime.now(timezone.utc)})
                 return None
             top = data[0]
             result = {"lat": float(top["lat"]), "lon": float(top["lon"]), "display_name": top.get("display_name", "")}
-            await db.geo_cache.insert_one({"key": key, **result, "created_at": datetime.now(timezone.utc).isoformat()})
+            await db.geo_cache.insert_one({"key": key, **result, "created_at": datetime.now(timezone.utc).isoformat(), "created_at_dt": datetime.now(timezone.utc)})
             return result
     except Exception as e:
         logging.warning(f"geocode failed for '{query}': {e}")
@@ -155,6 +155,8 @@ async def seed_curated():
 async def on_startup():
     try:
         await seed_curated()
+        # 90-day TTL on geo_cache
+        await db.geo_cache.create_index("created_at_dt", expireAfterSeconds=60 * 60 * 24 * 90)
     except Exception as e:
         logging.warning(f"Seed error: {e}")
 
@@ -571,6 +573,21 @@ async def list_places(category: Optional[str] = None, city: Optional[str] = None
         ql = q.lower()
         docs = [d for d in docs if ql in d["name"].lower() or ql in d["city"].lower() or ql in d["tagline"].lower() or any(ql in t.lower() for t in d.get("tags", []))]
     return docs
+
+
+@api_router.get("/places/{place_id}/similar", response_model=List[Place])
+async def similar_places(place_id: str, limit: int = 4):
+    base = await db.places.find_one({"id": place_id}, {"_id": 0})
+    if not base:
+        raise HTTPException(status_code=404, detail="Place not found")
+    # Same category, prefer same city, exclude self
+    cursor = db.places.find({"id": {"$ne": place_id}, "category": base["category"]}, {"_id": 0})
+    docs = await cursor.to_list(200)
+    same_city = [d for d in docs if d.get("city", "").lower() == base.get("city", "").lower()]
+    other = [d for d in docs if d.get("city", "").lower() != base.get("city", "").lower()]
+    same_city.sort(key=lambda d: d["verdict"]["sentiment_score"], reverse=True)
+    other.sort(key=lambda d: d["verdict"]["sentiment_score"], reverse=True)
+    return (same_city + other)[:limit]
 
 
 @api_router.get("/places/{place_id}", response_model=Place)

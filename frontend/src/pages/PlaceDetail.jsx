@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { fetchPlace, enrichPlace } from "@/lib/api";
+import { fetchPlace, enrichPlace, fetchSimilar } from "@/lib/api";
 import SentimentBar from "@/components/SentimentBar";
-import { ArrowLeft, Fire, CheckCircle, XCircle, ForkKnife, Quotes, PlayCircle, MapPin, NavigationArrow, Sparkle } from "@phosphor-icons/react";
+import PlaceCard from "@/components/PlaceCard";
+import { ArrowLeft, Fire, CheckCircle, XCircle, ForkKnife, Quotes, PlayCircle, MapPin, NavigationArrow, Sparkle, CaretLeft, CaretRight } from "@phosphor-icons/react";
 
 const mapsUrl = (place) => {
   const q = encodeURIComponent(`${place.name} ${place.city || ""}`.trim());
@@ -29,7 +30,23 @@ const PlaceDetail = () => {
   const [loading, setLoading] = useState(true);
   const [enriching, setEnriching] = useState(false);
   const [playerVid, setPlayerVid] = useState(null);
+  const [playerIdx, setPlayerIdx] = useState(0);
+  const [similar, setSimilar] = useState([]);
   const [mapProvider, setMapProvider] = useState(() => localStorage.getItem("scout_map_provider") || "osm");
+
+  useEffect(() => {
+    if (!id) return;
+    fetchSimilar(id).then(setSimilar).catch(() => setSimilar([]));
+  }, [id]);
+
+  const openPlayer = (i) => { setPlayerIdx(i); setPlayerVid(place.videos[i]); };
+  const stepPlayer = (delta) => {
+    if (!place?.videos?.length) return;
+    const n = place.videos.length;
+    const next = (playerIdx + delta + n) % n;
+    setPlayerIdx(next);
+    setPlayerVid(place.videos[next]);
+  };
 
   const switchProvider = (p) => {
     setMapProvider(p);
@@ -252,7 +269,7 @@ const PlaceDetail = () => {
             <button
               key={i}
               type="button"
-              onClick={() => setPlayerVid(vid)}
+              onClick={() => openPlayer(i)}
               data-testid={`video-source-${i}`}
               className="min-w-[300px] sm:min-w-[340px] group text-left cursor-pointer"
             >
@@ -311,6 +328,19 @@ const PlaceDetail = () => {
         </section>
       )}
 
+      {/* Similar places */}
+      {similar.length > 0 && (
+        <section className="mt-16" data-testid="similar-section">
+          <div className="mb-6">
+            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-stone-500 mb-2">More like this</div>
+            <h3 className="font-serif text-3xl tracking-tight">Similar places</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {similar.map((p, i) => <PlaceCard key={p.id} place={p} index={i} />)}
+          </div>
+        </section>
+      )}
+
       {/* YouTube player modal */}
       {playerVid && (
         <div
@@ -318,16 +348,23 @@ const PlaceDetail = () => {
           onClick={() => setPlayerVid(null)}
           className="fixed inset-0 z-50 bg-scout-ink/85 backdrop-blur-sm flex items-center justify-center p-4"
         >
+          <button data-testid="video-player-prev" onClick={(e) => { e.stopPropagation(); stepPlayer(-1); }} className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-colors">
+            <CaretLeft size={22} weight="bold" />
+          </button>
+          <button data-testid="video-player-next" onClick={(e) => { e.stopPropagation(); stepPlayer(1); }} className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/25 text-white flex items-center justify-center transition-colors">
+            <CaretRight size={22} weight="bold" />
+          </button>
           <div onClick={(e) => e.stopPropagation()} className="w-full max-w-4xl bg-scout-ink rounded-2xl overflow-hidden border border-white/10">
             <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
-              <div>
-                <div className="font-mono text-[10px] uppercase tracking-widest text-white/60">{playerVid.channel}</div>
+              <div className="min-w-0">
+                <div className="font-mono text-[10px] uppercase tracking-widest text-white/60">{playerVid.channel} · {playerIdx + 1} / {place.videos.length}</div>
                 <div className="text-white font-serif text-lg leading-snug line-clamp-1">{playerVid.title}</div>
               </div>
               <button data-testid="video-player-close" onClick={() => setPlayerVid(null)} className="text-white/70 hover:text-white text-2xl leading-none px-2">×</button>
             </div>
             <div className="aspect-video bg-black">
               <iframe
+                key={playerVid.video_id}
                 title={playerVid.title}
                 src={`https://www.youtube-nocookie.com/embed/${playerVid.video_id}?autoplay=1&rel=0`}
                 className="w-full h-full"

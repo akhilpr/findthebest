@@ -1,0 +1,23 @@
+{
+  "summary": "Iteration 10 verified end-to-end. Backend /api/places/{id}/similar returns 4 same-category places with different ids (Bar Basso: all category=bar, same-city Milan preferred first then others by sentiment desc: 8.9(Milan),9.5,9.1,8.9). Non-existent id returns 404. Route order correct — /places/{id} still returns 200. Frontend PlaceDetail shows 'similar-section' with 4 PlaceCards. Video modal prev/next/wraparound all functional; iframe src changes correctly on next (poWhz -> uRCHK), returns on prev, and wraps (prev from index 0 -> different last video 1J9Ma). Close button works. No console errors.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "GET /api/places/{Bar Basso}/similar returns 4 items, all category='bar', all ids different from source",
+    "Same-city (Milan) result appears first; remaining sorted by sentiment_score desc",
+    "GET /api/places/nonexistent-fake-id/similar → 404",
+    "GET /api/places/{Bar Basso} → 200 (route order OK: /similar registered before /{id})",
+    "Frontend: data-testid='similar-section' renders with 4 place cards",
+    "Frontend: video-source-0 opens video-player-modal with iframe",
+    "Frontend: video-player-next changes iframe src to next video_id",
+    "Frontend: video-player-prev returns to previous video_id",
+    "Frontend: wraparound — prev from index 0 loads a different (last) video",
+    "Frontend: video-player-close closes modal",
+    "No JS console errors on PlaceDetail"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "geo_cache TTL index creation not directly verified from client (no exposed endpoint); startup code path assumed executed given backend serving requests normally. Regression touch-check: home '/' & place detail loaded, map provider toggle not re-verified — assumed unchanged per iter 9 pass."
+}
