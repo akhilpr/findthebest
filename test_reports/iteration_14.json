@@ -1,0 +1,16 @@
+{
+  "summary": "Backend-only verification for iteration 14 (real YouTube thumbnails per place). Tested /api/discover for Paris/cafe and Tokyo/restaurant plus /api/enrich for Bar Basso. All checks passed: each discover call returns 6 places with UNIQUE i.ytimg.com images and 1 real video each; enrich updates image/hero_image to i.ytimg.com and returns 3 real videos.",
+  "tested_scope": ["backend"],
+  "passed": [
+    "POST /api/discover {city:Paris,category:cafe} -> 200, 6 places, 6/6 unique images, all start with https://i.ytimg.com/vi/, each place has videos[1]",
+    "POST /api/discover {city:Tokyo,category:restaurant} -> 200, 6 places, 6/6 unique images, all i.ytimg.com, each has videos[1]",
+    "POST /api/enrich/{Bar Basso id} -> 200, image & hero_image updated to https://i.ytimg.com/vi/poWhzmMdv0M/hqdefault.jpg, videos=3 real YouTube results",
+    "Discover video titles are contextually relevant (e.g., 'Best Coffee in Paris? | Télescope Café')"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "not tested (per request)"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Frontend regression checks (home cards, /place/{id} map + video modal) were NOT executed per 'testing_type: backend only' instruction from main agent."
+}

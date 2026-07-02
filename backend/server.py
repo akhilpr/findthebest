@@ -682,6 +682,9 @@ async def enrich_place(place_id: str):
     yt_vids = await fetch_youtube_videos(doc["name"], doc.get("city", ""), limit=3)
     if yt_vids:
         updates["videos"] = yt_vids
+        if yt_vids[0].get("thumbnail"):
+            updates["image"] = yt_vids[0]["thumbnail"]
+            updates["hero_image"] = yt_vids[0]["thumbnail"]
 
     if updates:
         await db.places.update_one({"id": place_id}, {"$set": updates})
@@ -761,6 +764,9 @@ async def discover_places(req: DiscoverRequest):
     places = []
     for it in items[:6]:
         try:
+            # Fetch 1 real YouTube video to use as thumbnail + provide real source
+            yt_vids = await fetch_youtube_videos(it.get("name", ""), req.city, limit=1)
+            place_img = yt_vids[0]["thumbnail"] if yt_vids and yt_vids[0].get("thumbnail") else img
             verdict = AIVerdict(
                 summary=it.get("summary", ""),
                 pros=it.get("pros", [])[:6],
@@ -780,11 +786,11 @@ async def discover_places(req: DiscoverRequest):
                 city=req.city,
                 country="",
                 tagline=it.get("tagline", ""),
-                image=img,
-                hero_image=hero,
+                image=place_img,
+                hero_image=place_img,
                 price_range="$$",
                 verdict=verdict,
-                videos=[],
+                videos=yt_vids or [],
                 top_comments=it.get("top_comments", [])[:5],
                 tags=it.get("tags", [])[:5],
                 curated=False,
