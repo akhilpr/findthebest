@@ -1,0 +1,23 @@
+{
+  "summary": "Iteration 4 - Verified fix for empty-videos rendering. Discover flow for Kochi restaurants leads to PlaceDetail (Paragon) which correctly hides 'Videos analyzed' section and shows deep-dive-cta empty state. CTA link navigates to /analyze?q=Paragon with mode auto-switched to 'specific' and name input pre-filled. Curated place (Jew Town Chai Wallah) regression: videos section renders with video-source-0 and no CTA shown. Home page loads with 6 named trending cards. Backend endpoints healthy.",
+  "tested_scope": ["frontend", "backend", "integration"],
+  "passed": [
+    "POST /api/discover Kochi restaurant returns 6 named places with videos:[] (cached, <1s)",
+    "POST /api/analyze Bar Basso Milan bar returns 200 in 0.14s (cached)",
+    "Discover flow: fill city Kochi + category restaurant, submit, results render",
+    "Click first discover card navigates to /place/{id}",
+    "'Videos analyzed' header is NOT rendered when place.videos is empty (Paragon)",
+    "deep-dive-cta card IS visible with correct heading 'Video sources not indexed for this place yet'",
+    "'Run deep analysis' link navigates to /analyze?q=Paragon",
+    "On /analyze?q=Paragon: mode-specific button has bg-scout-ink active class",
+    "analyze-name-input is visible and pre-filled with 'Paragon'",
+    "Top comments section renders normally below CTA",
+    "Regression: curated place Jew Town Chai Wallah shows 'Videos analyzed' with video-source-0 and NO deep-dive-cta",
+    "Regression: home page loads with 6 trending place-card names (Jew Town, Aman Tokyo, Ronin, Tim Ho Wan, Sichuan Impression, Bar Basso), no console errors"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}

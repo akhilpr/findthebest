@@ -140,6 +140,7 @@ const PlaceDetail = () => {
       </section>
 
       {/* Videos rail */}
+      {place.videos && place.videos.length > 0 && (
       <section className="mt-14">
         <div className="flex items-end justify-between mb-6">
           <div>
@@ -177,8 +178,19 @@ const PlaceDetail = () => {
           ))}
         </div>
       </section>
+      )}
 
-      {/* Top comments */}
+      {/* Empty-state for discover results without videos: offer deep-dive */}
+      {(!place.videos || place.videos.length === 0) && (
+        <section className="mt-14 bg-white rounded-3xl border border-stone-200 p-8 text-center" data-testid="deep-dive-cta">
+          <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-scout-terracotta mb-2">Want the full story?</div>
+          <h3 className="font-serif text-3xl tracking-tight mb-3">Video sources not indexed for this place yet</h3>
+          <p className="text-stone-600 mb-6 max-w-xl mx-auto">Run a deep-dive analysis to pull the top YouTube reviews, quotes, and comment excerpts for {place.name}.</p>
+          <Link to={`/analyze?q=${encodeURIComponent(place.name)}`} className="inline-flex items-center gap-2 bg-scout-terracotta text-white px-6 py-3 rounded-full text-sm font-medium hover:bg-scout-ink transition-colors">
+            Run deep analysis
+          </Link>
+        </section>
+      )}
       {place.top_comments?.length > 0 && (
         <section className="mt-14">
           <div className="mb-6">

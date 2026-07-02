@@ -18,7 +18,7 @@ const CATS = [
 const Analyze = () => {
   const [params] = useSearchParams();
   const nav = useNavigate();
-  const [mode, setMode] = useState("discover"); // discover | specific
+  const [mode, setMode] = useState(params.get("q") ? "specific" : "discover"); // discover | specific
   const [name, setName] = useState(params.get("q") || "");
   const [city, setCity] = useState("");
   const [cat, setCat] = useState("restaurant");
