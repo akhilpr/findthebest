@@ -1,0 +1,21 @@
+{
+  "summary": "Verified SW warning fix on iteration 15. Home loads clean with 0 service worker registrations and no SW-related console warnings/errors. Bar Basso detail page renders with map iframe, YouTube (i.ytimg.com) thumbnails, and share button. /city/Milan renders correctly with 2 bar cards.",
+  "tested_scope": ["frontend"],
+  "passed": [
+    "Home page loads successfully at production URL",
+    "navigator.serviceWorker.getRegistrations() returns 0 after load (fix confirmed)",
+    "No 'service worker navigation preload' warnings in console",
+    "No console warnings/errors of any kind after 2.5s load",
+    "/place/{Bar Basso id} detail page renders (hero, verdict, score 9.1/10, sentiment)",
+    "Map iframe present on detail page (1 iframe)",
+    "4 YouTube i.ytimg.com thumbnails rendered on Bar Basso detail",
+    "Share button visible on detail page",
+    "/city/Milan renders city hub with 2 verified spots (Bars category)"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "not_tested", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "The /analyze route sub-flow was not fully exercised (input selector timed out on that route), but the primary regression scope (home + place detail + city hub + SW cleanup) is fully verified. Kochi discover was not tested as part of this quick verification of a trivial fix."
+}

@@ -21,3 +21,9 @@ root.render(
     </QueryClientProvider>
   </React.StrictMode>,
 );
+
+// Silence stale service-worker preload warnings (unregister any legacy SW)
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});
+}
+
