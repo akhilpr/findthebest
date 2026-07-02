@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { fetchPlace } from "@/lib/api";
 import SentimentBar from "@/components/SentimentBar";
-import { ArrowLeft, Fire, CheckCircle, XCircle, ForkKnife, Quotes, PlayCircle } from "@phosphor-icons/react";
+import { ArrowLeft, Fire, CheckCircle, XCircle, ForkKnife, Quotes, PlayCircle, MapPin, NavigationArrow } from "@phosphor-icons/react";
+
+const mapsUrl = (place) => {
+  const q = encodeURIComponent(`${place.name} ${place.city || ""}`.trim());
+  return `https://www.google.com/maps/search/?api=1&query=${q}`;
+};
 
 const PlaceDetail = () => {
   const { id } = useParams();
@@ -76,6 +81,26 @@ const PlaceDetail = () => {
                 {t}
               </span>
             ))}
+          </div>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <a
+              href={mapsUrl(place)}
+              target="_blank"
+              rel="noreferrer"
+              data-testid="google-maps-link"
+              className="inline-flex items-center gap-2 bg-white text-scout-ink px-5 py-3 rounded-full text-sm font-medium hover:bg-scout-terracotta hover:text-white transition-colors"
+            >
+              <NavigationArrow size={16} weight="fill" /> Open in Google Maps
+            </a>
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${place.name} ${place.city || ""}`.trim())}`}
+              target="_blank"
+              rel="noreferrer"
+              data-testid="google-maps-directions"
+              className="inline-flex items-center gap-2 bg-white/15 backdrop-blur text-white border border-white/30 px-5 py-3 rounded-full text-sm font-medium hover:bg-white hover:text-scout-ink transition-colors"
+            >
+              <MapPin size={16} weight="fill" /> Directions
+            </a>
           </div>
         </div>
       </section>

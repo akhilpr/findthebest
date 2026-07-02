@@ -1,0 +1,23 @@
+{
+  "summary": "Iteration 5 (Google Maps links) validated end-to-end. Both PlaceCard pin button and PlaceDetail hero buttons work with correct URLs, targets, and no navigation/JS regressions. Backend endpoints unchanged and healthy.",
+  "tested_scope": ["frontend", "backend", "integration"],
+  "passed": [
+    "GET /api/trending → 200, returns 6 places (first: 'Jew Town Chai Wallah')",
+    "POST /api/discover {city:Kochi,category:restaurant} → 200, 6 places (first: 'Paragon') — cached path works",
+    "POST /api/analyze {place_name:'Bar Basso'} → 200, returns cached place",
+    "Home page loads and renders place cards",
+    "PlaceCard has data-testid='card-maps-{id}' visible bottom-right of image",
+    "Clicking card-maps opens NEW TAB with URL https://www.google.com/maps/search/?api=1&query=Jew%20Town%20Chai%20Wallah%20Kochi",
+    "Clicking card-maps does NOT navigate current tab (stays on home) — stopPropagation/preventDefault works",
+    "Clicking image body of card still navigates to /place/{id} (regression check)",
+    "PlaceDetail (/place/{id}) renders with data-testid='place-detail-page' and no JS/console errors (nested-<a> hydration bug is fixed)",
+    "Hero has data-testid='google-maps-link' with text 'Open in Google Maps', target=_blank, href=https://www.google.com/maps/search/?api=1&query=... (URL-encoded name+city)",
+    "Hero has data-testid='google-maps-directions' with text 'Directions', target=_blank, href=https://www.google.com/maps/dir/?api=1&destination=... (URL-encoded name+city)"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Discover-result cards were not explicitly re-tested end-to-end via UI, but PlaceCard component is the same shared component so card-maps button will be present there as well. Backend /api/analyze uses field name 'place_name' (not 'query') — pre-existing contract, not a regression."
+}

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Fire, MapPin } from "@phosphor-icons/react";
+import { Fire, MapPin, NavigationArrow } from "@phosphor-icons/react";
 
 const CATEGORY_LABELS = {
   restaurant: "Restaurant",
@@ -10,8 +10,11 @@ const CATEGORY_LABELS = {
   streetfood: "Street Food",
 };
 
+const mapsUrl = (place) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name} ${place.city || ""}`.trim())}`;
+
 const PlaceCard = ({ place, index = 0 }) => {
   const score = place.verdict?.sentiment_score ?? 0;
+  const stopBubble = (e) => e.stopPropagation();
   return (
     <Link
       to={`/place/${place.id}`}
@@ -37,11 +40,21 @@ const PlaceCard = ({ place, index = 0 }) => {
             {CATEGORY_LABELS[place.category] || place.category}
           </span>
         </div>
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-3 flex items-center gap-1.5">
           <span className="font-mono text-xs bg-scout-ink text-scout-bg px-2.5 py-1 rounded-full inline-flex items-center gap-1">
             <Fire size={11} weight="fill" className="text-scout-terracotta" /> {score.toFixed(1)}
           </span>
         </div>
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.open(mapsUrl(place), "_blank", "noopener,noreferrer"); }}
+          data-testid={`card-maps-${place.id}`}
+          title="Open in Google Maps"
+          aria-label={`Open ${place.name} in Google Maps`}
+          className="absolute bottom-3 right-3 bg-white/95 backdrop-blur hover:bg-scout-terracotta hover:text-white text-scout-ink w-9 h-9 rounded-full inline-flex items-center justify-center transition-colors shadow-sm"
+        >
+          <NavigationArrow size={14} weight="fill" />
+        </button>
       </div>
       <div className="pt-4 px-1">
         <div className="flex items-center gap-1 text-stone-500 text-xs mb-1.5">
@@ -62,3 +75,4 @@ const PlaceCard = ({ place, index = 0 }) => {
 };
 
 export default PlaceCard;
+
