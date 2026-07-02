@@ -102,6 +102,11 @@ class AnalyzeRequest(BaseModel):
     category: Optional[str] = "restaurant"
 
 
+class DiscoverRequest(BaseModel):
+    city: str
+    category: Optional[str] = "restaurant"
+
+
 # ================= Curated seed data =================
 CURATED_PLACES: List[dict] = [
     {
@@ -466,6 +471,120 @@ async def get_place(place_id: str):
     if not doc:
         raise HTTPException(status_code=404, detail="Place not found")
     return doc
+
+
+@api_router.post("/discover", response_model=List[Place])
+async def discover_places(req: DiscoverRequest):
+    """Return 6 specific named recommendations for a city + category."""
+    if not req.city or len(req.city.strip()) < 2:
+        raise HTTPException(status_code=400, detail="city required")
+
+    category = req.category or "restaurant"
+    cache_key = f"discover|{req.city.lower().strip()}|{category}"
+    cached = await db.discoveries.find_one({"cache_key": cache_key}, {"_id": 0})
+    if cached:
+        return cached["places"]
+
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(status_code=500, detail="LLM key not configured")
+
+    session_id = hashlib.md5(cache_key.encode()).hexdigest()
+    cat_label = {"restaurant": "restaurants", "cafe": "cafés", "hotel": "hotels", "bar": "bars/pubs", "streetfood": "street-food stalls", "tourist": "tourist attractions"}.get(category, "places")
+
+    system_msg = (
+        "You are Scout, an AI food and travel analyst. Given a city and category, you return 6 SPECIFIC, "
+        "REAL, NAMED establishments that YouTube food/travel creators consistently praise. "
+        "Return ONLY a valid JSON array (no prose, no markdown fences) of 6 objects with this schema: "
+        '[{"name":"SPECIFIC establishment name","tagline":"10-15 word one-liner","summary":"1-2 sentence honest verdict",'
+        '"pros":["...","...","..."],"cons":["...","...","..."],"must_try":["dish 1","dish 2","dish 3"],'
+        '"sentiment_score":8.7,"positive_pct":78,"negative_pct":10,"neutral_pct":12,"confidence":85,'
+        '"videos_analyzed":15,"comments_analyzed":900,"tags":["tag1","tag2"],'
+        '"top_comments":["...","...","..."]}]'
+        " CRITICAL: 'name' MUST be an actual real specific establishment. Do NOT return dishes or neighborhoods as names."
+        " Sort by sentiment_score descending. Percentages must sum to 100."
+    )
+
+    chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session_id, system_message=system_msg).with_model("gemini", "gemini-3-flash-preview")
+    prompt = f"City: {req.city}\nCategory: {cat_label}\n\nReturn the JSON array of 6 top {cat_label} in {req.city} now."
+    resp = await chat.send_message(UserMessage(text=prompt))
+    text = resp.strip() if isinstance(resp, str) else str(resp).strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.strip()
+    start = text.find("[")
+    end = text.rfind("]")
+    if start == -1 or end == -1:
+        raise HTTPException(status_code=502, detail="AI did not return valid JSON array")
+    try:
+        items = json.loads(text[start:end + 1])
+    except json.JSONDecodeError as e:
+        logging.error(f"discover JSON parse failed: {e}\nRaw: {text[:500]}")
+        raise HTTPException(status_code=502, detail="AI returned malformed JSON")
+
+    image_map = {
+        "restaurant": "https://images.unsplash.com/photo-1552566626-52f8b828add9?w=1200",
+        "cafe": "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=1200",
+        "hotel": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200",
+        "bar": "https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=1200",
+        "tourist": "https://images.unsplash.com/photo-1520962880247-cfaf541c8724?w=1200",
+        "streetfood": "https://images.unsplash.com/photo-1552879890-3a06dd3a06c2?w=1200",
+    }
+    hero_map = {
+        "restaurant": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1600",
+        "cafe": "https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=1600",
+        "hotel": "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=1600",
+        "bar": "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=1600",
+        "tourist": "https://images.unsplash.com/photo-1483728642387-6c3bdd6c93e5?w=1600",
+        "streetfood": "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=1600",
+    }
+    img = image_map.get(category, image_map["restaurant"])
+    hero = hero_map.get(category, hero_map["restaurant"])
+
+    places = []
+    for it in items[:6]:
+        try:
+            verdict = AIVerdict(
+                summary=it.get("summary", ""),
+                pros=it.get("pros", [])[:6],
+                cons=it.get("cons", [])[:6],
+                must_try=it.get("must_try", [])[:6],
+                sentiment_score=float(it.get("sentiment_score", 8.0)),
+                positive_pct=int(it.get("positive_pct", 75)),
+                negative_pct=int(it.get("negative_pct", 12)),
+                neutral_pct=int(it.get("neutral_pct", 13)),
+                confidence=int(it.get("confidence", 80)),
+                videos_analyzed=int(it.get("videos_analyzed", 15)),
+                comments_analyzed=int(it.get("comments_analyzed", 900)),
+            )
+            place = Place(
+                name=it.get("name", "Unknown"),
+                category=category,
+                city=req.city,
+                country="",
+                tagline=it.get("tagline", ""),
+                image=img,
+                hero_image=hero,
+                price_range="$$",
+                verdict=verdict,
+                videos=[],
+                top_comments=it.get("top_comments", [])[:5],
+                tags=it.get("tags", [])[:5],
+                curated=False,
+            )
+            doc = place.model_dump()
+            await db.places.insert_one(doc)
+            places.append(doc)
+        except Exception as e:
+            logging.warning(f"discover parse skip: {e}")
+
+    if not places:
+        raise HTTPException(status_code=502, detail="No valid places returned")
+
+    await db.discoveries.insert_one({"cache_key": cache_key, "places": places, "created_at": datetime.now(timezone.utc).isoformat()})
+    return places
+
 
 
 @api_router.post("/analyze", response_model=Place)

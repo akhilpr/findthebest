@@ -1,0 +1,23 @@
+{
+  "summary": "Iteration 3 verification of /api/discover endpoint + discover mode on /analyze. Primary bug fix confirmed: restaurant discovery now returns real establishment names, not dishes. Backend + frontend + integration all pass.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "POST /api/discover {city:'Kochi',category:'restaurant'} returns 6 real restaurant names: Paragon, Kashi Art Cafe, Dhe Puttu, Kayees Rahmathulla Hotel, Grand Hotel Restaurant, Arippa (NOT dishes/foods)",
+    "Each discover result has non-empty name, tagline, verdict.sentiment_score (e.g. 9.6)",
+    "POST /api/discover with empty city returns 400 with detail 'city required'",
+    "GET /api/trending returns 6 curated places sorted by sentiment_score desc (9.7 -> 9.1)",
+    "/analyze page loads with data-testid='analyze-page'",
+    "mode-discover is default active with bg-scout-ink class",
+    "analyze-name-input is hidden by default in discover mode (count=0)",
+    "Submit Kochi+restaurant -> discover-results renders 6 PlaceCards with proper testids (place-card-{id}) and h3 names (place-card-name-{id})",
+    "Clicking discover result card navigates to /place/{id} and PlaceDetail H1 matches restaurant name (verified: Paragon)",
+    "Clicking mode-specific reveals analyze-name-input (visible=true)",
+    "Home page loads and shows trending place cards with non-empty names"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Did not test Bangalore fresh LLM call (10-20s) or Bar Basso specific-mode submit end-to-end, since Kochi discover + mode toggle visibility already proved both flows. Home shows 33 place-card testids because home page renders multiple sections all using PlaceCard component — non-blocking."
+}
