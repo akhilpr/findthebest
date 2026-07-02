@@ -1,0 +1,109 @@
+{
+  "theme": "LIGHT",
+  "archetype": "1 (Organic & Earthy) with Editorial Twist",
+  "vibe_and_concept": "An editorial, magazine-like travel and food discovery app ('Scout'). It replaces generic grids with a cinematic, highly curated aesthetic. Bold typography, high-contrast text against warm natural backgrounds. Uses AI as a 'Copilot', with technical/data elements using monospaced fonts to contrast the elegant editorial serifs.",
+  "typography": {
+    "fonts": {
+      "heading": "Playfair Display, serif",
+      "body": "Manrope, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "heading_strategy": "Use tight letter spacing (tracking-tight) for large text. Avoid centering. Emphasize asymmetric left-aligned text.",
+    "hierarchy": {
+      "h1": "text-5xl sm:text-6xl font-light tracking-tight font-serif text-stone-900",
+      "h2": "text-3xl sm:text-4xl font-normal font-serif text-stone-900",
+      "h3": "text-xl sm:text-2xl font-medium font-serif text-stone-800",
+      "body": "text-base leading-relaxed text-stone-700 font-sans",
+      "overline_label": "text-xs uppercase tracking-[0.2em] font-mono text-stone-500",
+      "ai_data": "text-sm font-mono text-stone-600"
+    }
+  },
+  "colors": {
+    "backgrounds": {
+      "page": "#F7F5F0",
+      "card": "#FFFFFF",
+      "glass": "bg-white/70 backdrop-blur-xl border border-white/40 shadow-sm"
+    },
+    "text": {
+      "primary": "#1C1917",
+      "secondary": "#57534E",
+      "tertiary": "#A8A29E"
+    },
+    "accents": {
+      "primary": "#C85A4F",
+      "secondary": "#4B5320"
+    },
+    "sentiment": {
+      "positive_bg": "#EAF0EA",
+      "positive_text": "#2C362B",
+      "negative_bg": "#FDE6E3",
+      "negative_text": "#9B2C2C",
+      "neutral_bg": "#F5F5F4",
+      "neutral_text": "#57534E"
+    }
+  },
+  "layout_and_spacing": {
+    "spacing_scale": "Use generous padding: p-6, p-8, p-12 for sections to give breathing room. Avoid claustrophobic margins.",
+    "grid_system": "Bento Grid: Asymmetrical layout using grid-cols-1 md:grid-cols-12 gap-6 or gap-8. Hero images span col-span-8, side summary panels span col-span-4.",
+    "borders": "1px solid border-stone-200. No heavy shadows. Use soft diffuse shadows (shadow-sm or shadow-md) only on floating elements like nav or AI toasts.",
+    "radii": "Subtle rounded corners: rounded-xl or rounded-2xl. Avoid full pills except for small tags or badges."
+  },
+  "components": {
+    "search_bar": "Floating glassmorphism search bar with Phosphor icons. Large input text. An elegant pill or unified block, not a standard box.",
+    "place_card": "Image-heavy card. Image takes up 60-70% of card height. Clean sans-serif details below. Sentiment score represented as a monospaced badge e.g. [ 9.2/10 ].",
+    "detail_page_hero": "Large cinematic hero image taking up 50-60vh. Text overlaid with gradient bg-gradient-to-t from-stone-900/80 to-transparent, or image side-by-side with text.",
+    "ai_summary_card": "A bento box container. Title 'The Verdict' in serif. Bullet points with custom icons. Font-mono for 'Confidence Score' and AI metadata.",
+    "video_proof_section": "Horizontal scrolling list of video thumbnails (aspect-video) with reviewer avatars and quotes overlaid.",
+    "sentiment_bar": "Minimalist straight lines. Positive (Deep Olive) and Negative (Terracotta). No chunky default progress bars.",
+    "category_chips": "Minimalist outline chips (border-stone-300 text-stone-600), hover:bg-stone-900 hover:text-white transition-colors."
+  },
+  "motion_and_interactions": {
+    "hover_states": "Subtle scale up (scale-[1.02]) on image hover. Text color darkens on hover. Use ease-out duration-300.",
+    "page_transitions": "Fade in and slight upward translation (translate-y-4 to 0 opacity-100).",
+    "loading_states": "Avoid generic spinners. Use kinetic text-based loading (e.g., 'Analyzing 245 YouTube Comments...') in font-mono."
+  },
+  "accessibility": {
+    "contrast": "Ensure text over images has sufficient shadow or gradient overlay.",
+    "data_testid": "MANDATORY: Apply data-testid to all interactive elements, buttons, and forms (e.g. data-testid='search-input', data-testid='place-card-1')."
+  },
+  "icons_library": "@phosphor-icons/react (Use Light or Regular weight to match the elegant serif typography).",
+  "media": {
+    "images": [
+      {
+        "url": "https://images.pexels.com/photos/20202713/pexels-photo-20202713.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "Porto, Portugal sunset (Destination Hero)",
+        "category": "hero"
+      },
+      {
+        "url": "https://images.pexels.com/photos/31097395/pexels-photo-31097395.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "description": "European architecture (Location)",
+        "category": "hero"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1777537992558-fb229793f554",
+        "description": "Dimly lit fine dining (Dinner)",
+        "category": "place_image"
+      },
+      {
+        "url": "https://images.pexels.com/photos/12743256/pexels-photo-12743256.jpeg",
+        "description": "Cappuccinos on marble table (Cafe)",
+        "category": "place_image"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1696330123423-735eb4acc7a0",
+        "description": "Woman eating sandwich (Street Food)",
+        "category": "place_image"
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Install required dependencies via yarn: framer-motion, @phosphor-icons/react, lucide-react, clsx, tailwind-merge.",
+    "Inject Google Fonts in the main index.html: Playfair Display, Manrope, and JetBrains Mono.",
+    "Configure Tailwind spacing and font families in tailwind.config.js to match these guidelines.",
+    "Ensure the global body background is #F7F5F0 (Warm Beige) to establish the editorial feel.",
+    "Do NOT use pure white for the global background. Reserve pure white (#FFFFFF) strictly for elevated cards or bento boxes.",
+    "In the place details view, use a Bento Grid layout (e.g. grid-cols-1 md:grid-cols-3 or 4) to present the AI summary, sentiment, and video sources.",
+    "Include 'data-testid' on all interactive elements as it is critical for testing.",
+    "Write .js (ES6+) files for React components, no TypeScript (.tsx). Use prop-types if necessary, but keep it simple."
+  ]
+}
