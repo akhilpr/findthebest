@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { fetchPlace, enrichPlace, fetchSimilar } from "@/lib/api";
 import SentimentBar from "@/components/SentimentBar";
