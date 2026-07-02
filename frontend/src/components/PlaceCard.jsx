@@ -50,7 +50,7 @@ const PlaceCard = ({ place, index = 0 }) => {
             {place.city}
           </span>
         </div>
-        <h3 className="font-serif text-2xl leading-tight text-scout-ink group-hover:text-scout-terracotta transition-colors">
+        <h3 data-testid={`place-card-name-${place.id}`} className="font-serif text-2xl leading-tight text-scout-ink group-hover:text-scout-terracotta transition-colors">
           {place.name}
         </h3>
         <p className="text-sm text-stone-600 mt-1.5 line-clamp-2 leading-relaxed">
