@@ -1,0 +1,21 @@
+{
+  "summary": "Frontend-only verification of ERR_BLOCKED_BY_RESPONSE fix on /place/{Bar Basso}. Map iframe now uses OpenStreetMap embed with correct Bar Basso marker (45.4767746,9.2175792). Video links use youtube-nocookie.com/embed. No blocked-by-response console errors. All regression targets (google-maps-link, google-maps-directions, home card-maps) still functional.",
+  "tested_scope": ["frontend", "integration"],
+  "passed": [
+    "google-maps-embed iframe src starts with https://www.openstreetmap.org/export/embed.html?bbox=",
+    "google-maps-embed iframe src contains marker=45.4767746,9.2175792 (Bar Basso coords)",
+    "'On the map' heading rendered on PlaceDetail",
+    "formatted_address visible: 'Bar Basso', 'Via Plinio', 'Milano' all present in body",
+    "video-source-0 href = https://www.youtube-nocookie.com/embed/poWhzmMdv0M (real video id, correct nocookie embed URL, no watch?v=)",
+    "Hero google-maps-link present, href = https://www.google.com/maps/search/?api=1&query=Bar%20Basso%20Milan",
+    "Hero google-maps-directions button present",
+    "Home page loads and renders 86 card-maps buttons",
+    "Zero ERR_BLOCKED_BY_RESPONSE / 'refused to connect' console errors during PlaceDetail load"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "not tested (frontend-only per request)", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Backend not tested per request. Enrich flow regression (POST /api/enrich/{id}) not re-tested since only frontend URL construction changed; underlying video ids from DB are unchanged and video-source-0 rendered a valid real id (poWhzmMdv0M). Bar Basso PlaceDetail loaded cleanly with OSM iframe embedded without frame-blocking errors."
+}

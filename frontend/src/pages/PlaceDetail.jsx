@@ -12,10 +12,13 @@ const mapsUrl = (place) => {
 
 const embedSrc = (place) => {
   if (place.latitude != null && place.longitude != null) {
-    return `https://www.google.com/maps?q=${place.latitude},${place.longitude}&z=17&output=embed`;
+    const lat = place.latitude;
+    const lon = place.longitude;
+    const d = 0.004;
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${lon - d},${lat - d},${lon + d},${lat + d}&layer=mapnik&marker=${lat},${lon}`;
   }
-  const q = encodeURIComponent(`${place.name} ${place.city || ""}`.trim());
-  return `https://www.google.com/maps?q=${q}&output=embed`;
+  // Fallback: use a wide bbox around the city name via nominatim is not possible client-side; use a neutral world view + no marker
+  return `https://www.openstreetmap.org/export/embed.html?bbox=-180,-70,180,80&layer=mapnik`;
 };
 
 const PlaceDetail = () => {
@@ -234,7 +237,7 @@ const PlaceDetail = () => {
           {place.videos.map((vid, i) => (
             <a
               key={i}
-              href={`https://www.youtube.com/watch?v=${vid.video_id}`}
+              href={`https://www.youtube-nocookie.com/embed/${vid.video_id}`}
               target="_blank"
               rel="noreferrer"
               data-testid={`video-source-${i}`}
