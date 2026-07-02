@@ -1,0 +1,25 @@
+{
+  "summary": "Iteration 9 — validated video player modal, map provider toggle w/ localStorage persistence, and geo_cache MongoDB caching. All backend + frontend flows working.",
+  "tested_scope": ["frontend", "backend", "integration"],
+  "passed": [
+    "GET /api/places returns list; Bar Basso id fetched",
+    "POST /api/discover Porto/cafe returns 6 places (Manteigaria first)",
+    "POST /api/enrich/{Manteigaria id} populates latitude/longitude, formatted_address, and 3 real YouTube videos",
+    "db.geo_cache went from 0 → 1 entry (key: 'manteigaria porto') after first enrich",
+    "Second enrich completes quickly (~0.75s) with lat still returned — cache hit path works",
+    "GET /api/places/{Bar Basso} returns latitude and videos (persisted)",
+    "PlaceDetail page loads with data-testid='place-detail-page'",
+    "Default map provider is OSM (openstreetmap.org/export/embed) when no localStorage",
+    "Clicking data-testid='map-provider-google' switches iframe src to google.com/maps?q=lat,lon",
+    "Refreshing page persists Google provider (localStorage 'scout_map_provider')",
+    "Clicking data-testid='map-provider-osm' switches back to OSM",
+    "Clicking data-testid='video-source-0' opens data-testid='video-player-modal' with youtube-nocookie.com/embed/{video_id}?autoplay=1&rel=0 iframe",
+    "Clicking data-testid='video-player-close' (×) closes the modal",
+    "Real YouTube videos rendering on Bar Basso (Italian creator content, correct channels/thumbnails)"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}

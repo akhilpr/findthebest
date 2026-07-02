@@ -33,10 +33,14 @@ YOUTUBE_COMMENTS_URL = "https://www.googleapis.com/youtube/v3/commentThreads"
 
 
 async def geocode_place(name: str, city: str = "") -> Optional[dict]:
-    """Free geocoding via OpenStreetMap Nominatim. Returns {lat, lon, display_name} or None."""
+    """Free geocoding via OpenStreetMap Nominatim, cached in geo_cache collection."""
     query = f"{name} {city}".strip()
     if not query:
         return None
+    key = query.lower()
+    cached = await db.geo_cache.find_one({"key": key}, {"_id": 0})
+    if cached:
+        return None if cached.get("miss") else {"lat": cached["lat"], "lon": cached["lon"], "display_name": cached.get("display_name", "")}
     try:
         async with httpx.AsyncClient(timeout=6.0) as client:
             r = await client.get(
@@ -47,13 +51,12 @@ async def geocode_place(name: str, city: str = "") -> Optional[dict]:
             r.raise_for_status()
             data = r.json()
             if not data:
+                await db.geo_cache.insert_one({"key": key, "miss": True, "created_at": datetime.now(timezone.utc).isoformat()})
                 return None
             top = data[0]
-            return {
-                "lat": float(top["lat"]),
-                "lon": float(top["lon"]),
-                "display_name": top.get("display_name", ""),
-            }
+            result = {"lat": float(top["lat"]), "lon": float(top["lon"]), "display_name": top.get("display_name", "")}
+            await db.geo_cache.insert_one({"key": key, **result, "created_at": datetime.now(timezone.utc).isoformat()})
+            return result
     except Exception as e:
         logging.warning(f"geocode failed for '{query}': {e}")
         return None

@@ -10,14 +10,16 @@ const mapsUrl = (place) => {
   return `https://www.google.com/maps/search/?api=1&query=${q}`;
 };
 
-const embedSrc = (place) => {
-  if (place.latitude != null && place.longitude != null) {
-    const lat = place.latitude;
-    const lon = place.longitude;
-    const d = 0.004;
+const embedSrc = (place, provider = "osm") => {
+  const hasCoords = place.latitude != null && place.longitude != null;
+  if (provider === "google") {
+    if (hasCoords) return `https://www.google.com/maps?q=${place.latitude},${place.longitude}&z=17&output=embed`;
+    return `https://www.google.com/maps?q=${encodeURIComponent(`${place.name} ${place.city || ""}`.trim())}&output=embed`;
+  }
+  if (hasCoords) {
+    const lat = place.latitude, lon = place.longitude, d = 0.004;
     return `https://www.openstreetmap.org/export/embed.html?bbox=${lon - d},${lat - d},${lon + d},${lat + d}&layer=mapnik&marker=${lat},${lon}`;
   }
-  // Fallback: use a wide bbox around the city name via nominatim is not possible client-side; use a neutral world view + no marker
   return `https://www.openstreetmap.org/export/embed.html?bbox=-180,-70,180,80&layer=mapnik`;
 };
 
@@ -26,6 +28,13 @@ const PlaceDetail = () => {
   const [place, setPlace] = useState(null);
   const [loading, setLoading] = useState(true);
   const [enriching, setEnriching] = useState(false);
+  const [playerVid, setPlayerVid] = useState(null);
+  const [mapProvider, setMapProvider] = useState(() => localStorage.getItem("scout_map_provider") || "osm");
+
+  const switchProvider = (p) => {
+    setMapProvider(p);
+    localStorage.setItem("scout_map_provider", p);
+  };
 
   useEffect(() => {
     (async () => {
@@ -207,12 +216,17 @@ const PlaceDetail = () => {
               <p className="mt-1 text-sm text-stone-600 max-w-2xl font-mono">{place.formatted_address}</p>
             )}
           </div>
+          <div className="inline-flex bg-white border border-stone-200 rounded-full p-1" data-testid="map-provider-toggle">
+            <button type="button" data-testid="map-provider-osm" onClick={() => switchProvider("osm")} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${mapProvider === "osm" ? "bg-scout-ink text-scout-bg" : "text-stone-600 hover:text-scout-ink"}`}>OSM</button>
+            <button type="button" data-testid="map-provider-google" onClick={() => switchProvider("google")} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${mapProvider === "google" ? "bg-scout-ink text-scout-bg" : "text-stone-600 hover:text-scout-ink"}`}>Google</button>
+          </div>
         </div>
         <div className="relative rounded-2xl overflow-hidden border border-stone-200 bg-stone-100" style={{ height: 380 }}>
           <iframe
+            key={mapProvider}
             title={`Map of ${place.name}`}
             data-testid="google-maps-embed"
-            src={embedSrc(place)}
+            src={embedSrc(place, mapProvider)}
             width="100%"
             height="380"
             style={{ border: 0 }}
@@ -235,13 +249,12 @@ const PlaceDetail = () => {
         </div>
         <div className="flex gap-5 overflow-x-auto rail pb-4 -mx-2 px-2">
           {place.videos.map((vid, i) => (
-            <a
+            <button
               key={i}
-              href={`https://www.youtube-nocookie.com/embed/${vid.video_id}`}
-              target="_blank"
-              rel="noreferrer"
+              type="button"
+              onClick={() => setPlayerVid(vid)}
               data-testid={`video-source-${i}`}
-              className="min-w-[300px] sm:min-w-[340px] group"
+              className="min-w-[300px] sm:min-w-[340px] group text-left cursor-pointer"
             >
               <div className="relative aspect-video rounded-xl overflow-hidden bg-stone-200">
                 <img src={vid.thumbnail} alt={vid.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
@@ -258,7 +271,7 @@ const PlaceDetail = () => {
                 </div>
                 <p className="mt-2 text-sm text-stone-600 italic leading-snug line-clamp-3">"{vid.quote}"</p>
               </div>
-            </a>
+            </button>
           ))}
         </div>
       </section>
@@ -296,6 +309,34 @@ const PlaceDetail = () => {
             ))}
           </div>
         </section>
+      )}
+
+      {/* YouTube player modal */}
+      {playerVid && (
+        <div
+          data-testid="video-player-modal"
+          onClick={() => setPlayerVid(null)}
+          className="fixed inset-0 z-50 bg-scout-ink/85 backdrop-blur-sm flex items-center justify-center p-4"
+        >
+          <div onClick={(e) => e.stopPropagation()} className="w-full max-w-4xl bg-scout-ink rounded-2xl overflow-hidden border border-white/10">
+            <div className="flex items-center justify-between px-5 py-3 border-b border-white/10">
+              <div>
+                <div className="font-mono text-[10px] uppercase tracking-widest text-white/60">{playerVid.channel}</div>
+                <div className="text-white font-serif text-lg leading-snug line-clamp-1">{playerVid.title}</div>
+              </div>
+              <button data-testid="video-player-close" onClick={() => setPlayerVid(null)} className="text-white/70 hover:text-white text-2xl leading-none px-2">×</button>
+            </div>
+            <div className="aspect-video bg-black">
+              <iframe
+                title={playerVid.title}
+                src={`https://www.youtube-nocookie.com/embed/${playerVid.video_id}?autoplay=1&rel=0`}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );
