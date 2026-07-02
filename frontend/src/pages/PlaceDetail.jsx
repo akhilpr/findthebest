@@ -196,6 +196,20 @@ const PlaceDetail = () => {
             >
               <MapPin size={16} weight="fill" /> Directions
             </a>
+            <button
+              type="button"
+              data-testid="share-btn"
+              onClick={async () => {
+                const url = `${window.location.origin}/api/share/place/${place.id}`;
+                try {
+                  if (navigator.share) await navigator.share({ title: place.name, text: place.tagline, url });
+                  else { await navigator.clipboard.writeText(url); toast.success("Share link copied"); }
+                } catch (e) {}
+              }}
+              className="inline-flex items-center gap-2 bg-white/15 backdrop-blur text-white border border-white/30 px-5 py-3 rounded-full text-sm font-medium hover:bg-white hover:text-scout-ink transition-colors"
+            >
+              Share
+            </button>
           </div>
         </div>
       </section>

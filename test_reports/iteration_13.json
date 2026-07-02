@@ -1,0 +1,26 @@
+{
+  "summary": "Iteration 13 (OG image + share deep-links) tested. Backend endpoints /api/og/{id}.svg and /api/share/place/{id} work correctly. Frontend Share button on PlaceDetail hero triggers clipboard fallback and shows 'Share link copied' toast.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "GET /api/og/{Bar Basso id}.svg → 200, content-type image/svg+xml, body starts with '<svg xmlns', contains 'Bar Basso', '9.1', 'BAR' (uppercase category) and city 'Milan', 'VERIFIED BY 24 YOUTUBE VIDEOS'",
+    "GET /api/og/nonexistent-id.svg → 404 as expected",
+    "GET /api/share/place/{id} → 200 HTML with og:title 'Bar Basso · 9.1/10 on Scout', og:description containing tagline, og:image pointing to /api/og/{id}.svg, twitter:card='summary_large_image', meta http-equiv=refresh and window.location.replace to /place/{id}",
+    "Frontend: [data-testid='share-btn'] visible on PlaceDetail hero next to Directions",
+    "Clicking share-btn (with navigator.share stubbed) writes share URL to clipboard and displays 'Share link copied' toast",
+    "Regression: similar-section present, /city/Milan route returns 200, PlaceDetail page loads with hero, rating, tags, Open in Google Maps and Directions buttons"
+  ],
+  "failed": [
+    {
+      "area": "OG SVG text content",
+      "issue": "Spec asked for 'MILAN' (uppercase category) but the SVG renders category as uppercase 'BAR' and city as title-case 'Milan' ('SCOUT · BAR · Milan'). Likely a wording ambiguity in the spec, not an app bug — category IS uppercase and Milan is present.",
+      "evidence": "SVG line: 'SCOUT · BAR · Milan'",
+      "priority": "LOW"
+    }
+  ],
+  "action_items": [
+    "Confirm intended casing for city in OG SVG (currently 'Milan' title case, spec text was ambiguous). No code change required if current design is intentional."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}

@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Response, Request
+from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -573,6 +574,59 @@ async def list_places(category: Optional[str] = None, city: Optional[str] = None
         ql = q.lower()
         docs = [d for d in docs if ql in d["name"].lower() or ql in d["city"].lower() or ql in d["tagline"].lower() or any(ql in t.lower() for t in d.get("tags", []))]
     return docs
+
+
+@api_router.get("/og/{place_id}.svg")
+async def og_image(place_id: str):
+    doc = await db.places.find_one({"id": place_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Place not found")
+    v = doc.get("verdict", {})
+    score = v.get("sentiment_score", 0)
+    name = (doc.get("name") or "")[:48].replace("&", "&amp;").replace("<", "&lt;")
+    city = (doc.get("city") or "").replace("&", "&amp;").replace("<", "&lt;")
+    cat = (doc.get("category") or "").upper()
+    tagline = (doc.get("tagline") or "")[:110].replace("&", "&amp;").replace("<", "&lt;")
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<rect width="1200" height="630" fill="#1C1917"/>
+<rect x="0" y="0" width="8" height="630" fill="#C85A4F"/>
+<text x="60" y="120" fill="#C85A4F" font-family="monospace" font-size="18" letter-spacing="4">SCOUT · {cat} · {city}</text>
+<text x="60" y="280" fill="#F7F5F0" font-family="Georgia,serif" font-size="86" font-weight="600">{name}</text>
+<text x="60" y="360" fill="#EFEAE0" font-family="Georgia,serif" font-size="30" font-style="italic">{tagline}</text>
+<circle cx="1070" cy="540" r="70" fill="#C85A4F"/>
+<text x="1070" y="555" fill="#fff" font-family="Georgia,serif" font-size="42" font-weight="700" text-anchor="middle">{score:.1f}</text>
+<text x="60" y="560" fill="#78716C" font-family="monospace" font-size="16" letter-spacing="3">VERIFIED BY {v.get('videos_analyzed',0)} YOUTUBE VIDEOS · {v.get('comments_analyzed',0)} COMMENTS</text>
+</svg>'''
+    return Response(content=svg, media_type="image/svg+xml", headers={"Cache-Control": "public, max-age=3600"})
+
+
+@api_router.get("/share/place/{place_id}", response_class=HTMLResponse)
+async def share_place(place_id: str):
+    doc = await db.places.find_one({"id": place_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Place not found")
+    v = doc.get("verdict", {})
+    name = doc.get("name", "").replace('"', "'")
+    tagline = doc.get("tagline", "").replace('"', "'")
+    city = doc.get("city", "")
+    score = v.get("sentiment_score", 0)
+    frontend_url = os.environ.get("FRONTEND_URL", "")
+    og_img = f"/api/og/{place_id}.svg"
+    place_url = f"/place/{place_id}"
+    html = f'''<!doctype html><html><head>
+<title>{name} — Scout</title>
+<meta property="og:title" content="{name} · {score:.1f}/10 on Scout" />
+<meta property="og:description" content="{tagline} — verified by {v.get('videos_analyzed',0)} YouTube videos." />
+<meta property="og:image" content="{og_img}" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="{name} · {score:.1f}/10 on Scout" />
+<meta name="twitter:description" content="{tagline}" />
+<meta name="twitter:image" content="{og_img}" />
+<meta http-equiv="refresh" content="0; url={place_url}" />
+<script>window.location.replace("{place_url}");</script>
+</head><body><p>Opening <a href="{place_url}">{name} in {city}</a>...</p></body></html>'''
+    return HTMLResponse(content=html)
 
 
 @api_router.get("/places/{place_id}/similar", response_model=List[Place])
