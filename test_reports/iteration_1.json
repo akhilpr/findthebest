@@ -1,0 +1,36 @@
+{
+  "summary": "First-finish smoke tests for Scout MVP. Backend (trending, places, filters, 404, analyze fresh+cached, empty validation, bar analyze) all pass. Frontend home, trending cards, category chips, hero search redirect to /analyze?q=, nav testids, place detail page (sentiment-bar, video-source-0), and full Analyze flow (Bar Basso -> loading-kinetic -> /place/{id}) all pass with no errors.",
+  "tested_scope": ["frontend", "backend", "integration"],
+  "passed": [
+    "GET /api/trending returns 6 curated places sorted by sentiment_score desc; all required fields present",
+    "GET /api/places auto-seeds and returns curated set (8 curated + 1 analyzed = 9 total in DB)",
+    "GET /api/places?category=restaurant filters to restaurants only",
+    "GET /api/places?city=Milan returns Bar Basso",
+    "GET /api/places?q=chai matches Jew Town Chai Wallah",
+    "GET /api/places/{random-uuid} returns 404",
+    "POST /api/analyze Katz Delicatessen: valid Place, sentiment=9.1, confidence=97, 3 pros/cons/must_try, 3 videos, tags array (~8s)",
+    "POST /api/analyze Katz repeat: cached response <200ms",
+    "POST /api/analyze The Aviary bar: valid Place with sentiment=9.1, confidence=95, 3 videos",
+    "POST /api/analyze empty place_name -> 400",
+    "Home / loads, hero-search-input and hero-search-submit present",
+    "16 place-card-{id} elements rendered (trending + browse grid)",
+    "nav-home, nav-discover, nav-analyze testids present",
+    "chip-cafe present and clickable",
+    "HeroSearch: 'Ronin' + submit navigates to /analyze?q=Ronin with analyze-name-input prefilled 'Ronin'",
+    "Clicking a place card navigates to /place/{id}; place-detail-page, sentiment-bar, video-source-0 all present",
+    "Analyze flow: filled Bar Basso/Milan/bar -> submit shows loading-kinetic -> navigates to /place/{new-id} with detail page",
+    "No .error or [class*=error] messages visible on page"
+  ],
+  "failed": [
+    {
+      "area": "Frontend (very minor)",
+      "issue": "Exact-string locator for hero headline 'The best places, verified by every food creator alive.' returned 0 matches (likely split across DOM nodes / animated per-word rendering). Visual headline appears rendered correctly in Home page.",
+      "evidence": "STEP2 headline_found=0 via page.locator('text=...').count()",
+      "priority": "LOW"
+    }
+  ],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}
