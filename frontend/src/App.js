@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import Home from "@/pages/Home";
 import PlaceDetail from "@/pages/PlaceDetail";
 import Analyze from "@/pages/Analyze";
+import CityHub from "@/pages/CityHub";
 import NavBar from "@/components/NavBar";
 
 function App() {
@@ -14,6 +15,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/analyze" element={<Analyze />} />
+          <Route path="/city/:name" element={<CityHub />} />
           <Route path="/place/:id" element={<PlaceDetail />} />
         </Routes>
         <Toaster position="top-center" richColors />

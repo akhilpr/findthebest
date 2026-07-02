@@ -1,0 +1,27 @@
+{
+  "summary": "Iteration 12 (City Hub) frontend smoke test. CityHub page works well for Milan, Kochi, and empty city. However, the promised clickable city label on PlaceCard (data-testid='card-city-{id}') is NOT implemented — city text is a plain <span> inside the outer Link, so clicking it navigates to /place/{id} instead of /city/{name}.",
+  "tested_scope": ["frontend", "integration"],
+  "passed": [
+    "/city/Milan renders data-testid='city-hub-page', title 'Milan', data-testid='city-section-bar' present, Bar Basso card visible",
+    "/city/Kochi renders city-section-restaurant + city-section-streetfood, Paragon and Jew Town Chai Wallah visible",
+    "/city/Nonexistentville shows 'No places yet in Nonexistentville' empty state with a link to /analyze",
+    "Home page loads with real place names (Jew Town Chai Wallah, Bar Basso etc. visible)",
+    "New /city/:name route wired correctly in App.js and consumes GET /api/places?city= without errors"
+  ],
+  "failed": [
+    {
+      "area": "PlaceCard city label click behavior",
+      "issue": "data-testid='card-city-{id}' does NOT exist on any PlaceCard. City label is a non-interactive <span> inside the outer <Link to='/place/{id}'>. Clicking the city text navigates to /place/{id} instead of /city/{cityname}. No stopPropagation, no inner Link.",
+      "evidence": "Playwright: page.locator('[data-testid^=\"card-city-\"]').count() == 0. Clicking the city span on first Home card navigated to https://local-discovery-hub-4.preview.emergentagent.com/place/4a1ecdc8-8f50-47ac-a7fc-381599fb7d55 (place detail), never to /city/*. Code review of /app/frontend/src/components/PlaceCard.jsx lines 59-65 confirms the city is a plain <span> — no onClick, no Link, no data-testid.",
+      "priority": "HIGH"
+    }
+  ],
+  "action_items": [
+    "Update /app/frontend/src/components/PlaceCard.jsx: replace the city <span> with a <Link to={`/city/${encodeURIComponent(place.city)}`}> (or a button that calls navigate) with data-testid={`card-city-${place.id}`}, and add onClick={(e)=>{e.preventDefault(); e.stopPropagation();}} + programmatic navigation so it does not bubble up to the outer /place/{id} Link. Note: nesting <Link> inside <Link> is invalid HTML — prefer restructuring outer wrapper to a div with an inner 'view place' Link, OR use a <button> with useNavigate() and stopPropagation for the city.",
+    "Re-test Test #3 after fix (regression scope: Home + CityHub cards both should support city-label click)."
+  ],
+  "success_rate": {"backend": "n/a (frontend-only requested)", "frontend": "80% (4/5 test scenarios pass; PlaceCard city-click feature is missing)"},
+  "retest_needed": true,
+  "full_testing_deferred": true,
+  "notes": "Regression checks for /place/{id} similar section, ?v=1 video deep-link, and keyboard shortcuts were NOT executed in this pass — the card-city bug was reproduced early and prioritized for reporting per latency-sensitive workflow. Please re-run those regressions after PlaceCard fix."
+}
