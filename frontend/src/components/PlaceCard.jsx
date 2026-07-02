@@ -59,9 +59,14 @@ const PlaceCard = ({ place, index = 0 }) => {
       <div className="pt-4 px-1">
         <div className="flex items-center gap-1 text-stone-500 text-xs mb-1.5">
           <MapPin size={12} weight="regular" />
-          <span className="font-mono uppercase tracking-wider">
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); window.location.href = `/city/${encodeURIComponent(place.city)}`; }}
+            data-testid={`card-city-${place.id}`}
+            className="font-mono uppercase tracking-wider hover:text-scout-terracotta transition-colors"
+          >
             {place.city}
-          </span>
+          </button>
         </div>
         <h3 data-testid={`place-card-name-${place.id}`} className="font-serif text-2xl leading-tight text-scout-ink group-hover:text-scout-terracotta transition-colors">
           {place.name}
